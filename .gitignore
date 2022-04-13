@@ -1,0 +1,15 @@
+# general files
+*.log
+*.out
+*.db
+
+# python files
+*.pyc
+python/.cache
+__pycache__
+
+# special files and directories
+data
+.ipynb_checkpoints/
+.vscode/
+.idea/
