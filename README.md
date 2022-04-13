@@ -14,10 +14,21 @@
 5. If you need to get web service accessible from anywhere, execute `uvicorn main:app --host 0.0.0.0` and check the firewall settings
 
 Examples:
+
 http://localhost:8000/picnic%20bag
+
 http://localhost:8000/babooshka
+
+http://localhost:8000/retrospot%20umbrella
 
 Note: Apache Spark should be installed and started on the local machine.
 
-##
+## Versions
 
+Web service was tested on MS Windows 10 and Ubuntu Linux 18.04
+
+Apache Spark: 3.1.3 for Hadoop 2.7
+
+# Presentation
+
+https://docs.google.com/presentation/d/1YysVm8qx869WbsyXq7dJdCPPggVbpMlbM6xuUXcu_As/edit?usp=sharing

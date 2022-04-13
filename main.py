@@ -1,9 +1,9 @@
+import re
 import os
 import sys
 import csv
 import pandas as pd
 from pyspark.sql import SparkSession, functions as F
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, DoubleType
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import StopWordsRemover, Tokenizer, NGram, HashingTF, MinHashLSH, RegexTokenizer, SQLTransformer
 import logging
@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s :: %(levelname)s :: %(message)s')
 
+# Load MS Excel source file, perform simple clenup (remove all empty descriptions and duplicates) and save as CSV
 if not os.path.isfile('./data/main_data.csv'):
     try:
         logging.info('Data file does not exist. Downloading data from UCI ML repository...')
@@ -32,13 +33,15 @@ if not os.path.isfile('./data/main_data.csv'):
 logging.info('Starting SPARK session...')
 spark = SparkSession.builder.appName('pandas to spark').getOrCreate()
 
-#stripYear = F.udf(lambda title: title[:-7])
+# Description cleanup function
+# Now implemented cleaning only for 'SET OF N(number)'
+cleanup = F.udf(lambda input_string: re.sub('SET\s*OF\s*[0-9]+', '', input_string))
 transactions_df = (spark.read.csv('./data/main_data.csv', header=True, inferSchema=True)
     .drop('StockCode')
-    #.withColumn('description', stripYear(F.col('description')))
+    .withColumn('description', cleanup(F.col('description')))
 )
-#transactions_df.show(5, False)
 
+# Start SPARK transforming/modeling pipeline
 logging.info('Starting SPARK modeling pipeline...')
 model = Pipeline(stages=[
     SQLTransformer(statement="SELECT *, lower(Description) lower FROM __THIS__"),
@@ -53,12 +56,13 @@ model = Pipeline(stages=[
 result_model = model.transform(transactions_df)
 result_model = result_model.filter(F.size(F.col("ngram")) > 0)
 
+# Function for the batch transform job (forward pass) to test word/phrase
 def find_similarities(req_str):
     req_df = pd.DataFrame(columns=['description'])
     req_df.loc[0] = [req_str]
     result_request = model.transform(spark.createDataFrame(req_df))
     result_request = result_request.filter(F.size(F.col("ngram")) > 0)
-    result = model.stages[-1].approxSimilarityJoin(result_request, result_model, 2.0, 'jaccardDist')
+    result = model.stages[-1].approxSimilarityJoin(result_request, result_model, 1.0, 'jaccardDist')
     result_df = result.select('datasetB.Description', 'jaccardDist').sort(F.col('jaccardDist')).toPandas().head(10)
     res = []
     for i in range(len(result_df)):
@@ -70,15 +74,18 @@ def find_similarities(req_str):
     return res
 
 
-# Starting web application
+# Start web application
 logging.info('Starting web service...')
 app = FastAPI()
 
+# Default request
 @app.get("/")
 def read_root():
     return {"Hello": "Skupos"}
 
+# GET request for payload
 @app.get("/{req_str}")
 def read_item(req_str: str):
+# TODO: Add the fool protection for the input
     similarities = find_similarities(req_str)
     return {"result": similarities}
