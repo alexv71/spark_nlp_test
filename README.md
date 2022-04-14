@@ -1,4 +1,4 @@
-# Skupos Take Home Assignment
+# Take Home Assignment
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@
 ## Usage
 1. Clone the repository: `git clone https://github.com/alexv71/spark_nlp_test`
 2. `cd spark_nlp_test`
-3. Execuite `uvicorn main:app` and wait for full loading of the web service
+3. Execute `uvicorn main:app` and wait for full loading of the web service
 4. Navigate your browser to http://localhost:8000/YOUR_SEARCH_PHRASE_HERE
 5. If you need to get web service accessible from anywhere, execute `uvicorn main:app --host 0.0.0.0` and check the firewall settings
 
